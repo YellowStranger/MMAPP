@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: daphne -b 0.0.0.0 -p 8000 chat_project.asgi:application
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DEBUG=1
+      - DATABASE_ENGINE=django.db.backends.mysql
+      - DATABASE_NAME=mmapp_db
+      - DATABASE_USER=mmapp_user
+      - DATABASE_PASSWORD=mmapp_pass
+      - DATABASE_HOST=db
+      - DATABASE_PORT=3306
+      - REDIS_HOST=redis
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: mmapp_db
+      MYSQL_USER: mmapp_user
+      MYSQL_PASSWORD: mmapp_pass
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:

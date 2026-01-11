@@ -1,0 +1,34 @@
+# General
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local settings
+*.env
+.env
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# Django
+*.log
+local_settings.py
+staticfiles/
+media/
+!media/.gitkeep
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - MMAPP{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+    <div class="bg-white p-4 md:p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex justify-center mb-4">
+            <img src="{% static 'images/logo.png' %}" alt="MMAPP Logo" class="h-20 w-auto">
+        </div>
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">Login to MMAPP</h2>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">Please check your username and password.</span>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="id_username">Username</label>
+                <input
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    id="id_username" name="username" type="text" placeholder="Username" required>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="id_password">Password</label>
+                <input
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    id="id_password" name="password" type="password" placeholder="******************" required>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <button
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-150"
+                    type="submit">
+                    Sign In
+                </button>
+            </div>
+        </form>
+        <p class="mt-4 text-center text-gray-600 text-xs">
+            Don't have an account? <a href="{% url 'signup' %}" class="text-blue-500 hover:text-blue-800">Sign up</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

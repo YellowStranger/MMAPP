@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chat_extras %}
+
+{% block title %}Chat{% endblock %}
+
+{% block content %}
+<div class="flex h-screen antialiased text-gray-800" x-data="{ sidebarOpen: {{ active_chat|yesno:'false,true' }} }">
+    <!-- Sidebar -->
+    <div class="flex flex-col w-full md:w-80 bg-white border-r" :class="sidebarOpen ? 'flex' : 'hidden md:flex'">
+        <!-- Sidebar Header -->
+        <div class="pt-3 pb-4 px-4 border-b">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
+                        {% if user.avatar %}
+                        <img class="w-10 h-10 object-cover" src="{{ user.avatar.url }}" alt="{{ user.username }}">
+                        {% else %}
+                        <svg class="absolute w-12 h-12 text-gray-400 -left-1" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">{{ user.username }}</h2>
+                        <span class="text-xs text-green-500 flex items-center">
+                            <span class="w-2 h-2 rounded-full bg-green-500 mr-1"></span> Online
+                        </span>
+                    </div>
+                </div>
+                <form action="{% url 'logout' %}" method="post" class="flex items-center">
+                    {% csrf_token %}
+                    <a href="{% url 'edit_profile' %}" class="text-gray-500 hover:text-blue-500 mr-2"
+                        title="Edit Profile">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </a>
+                    <button type="submit" class="text-gray-500 hover:text-red-500" title="Logout">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <div class="mt-4 relative">
+                <form onsubmit="event.preventDefault(); window.location.href='/start/'+this.username.value">
+                    <input name="username" type="text" placeholder="Type username & press Enter..."
+                        class="w-full py-2 pl-10 pr-4 text-gray-700 bg-gray-100 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200">
+                    <span class="absolute top-2.5 left-3 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                </form>
+                <div class="mt-2 text-right">
+                    <a href="{% url 'create_group' %}" class="text-xs text-blue-500 hover:text-blue-700 font-semibold">+
+                        New Group</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat List -->
+        <div class="flex-1 overflow-y-auto">
+            {% for chat in chats %}
+            <a href="{% url 'chat_detail' chat.id %}"
+                class="block px-4 py-3 hover:bg-gray-50 transition duration-150 border-b {% if active_chat and active_chat.id == chat.id %}bg-blue-50 border-l-4 border-l-blue-500{% endif %}">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600 overflow-hidden">
+                        {% if chat.chat_type == 'private' %}
+                        {% with partner=chat|get_chat_partner:user %}
+                        {% if partner.avatar %}
+                        <img src="{{ partner.avatar.url }}" alt="{{ partner.username }}"
+                            class="w-full h-full object-cover">
+                        {% else %}
+                        {{ partner.username|make_list|first|upper }}
+                        {% endif %}
+                        {% endwith %}
+                        {% else %}
+                        #
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-sm font-semibold text-gray-800 truncate">{{ chat|get_chat_name:user }}</h3>
+                            <span class="text-xs text-gray-400">...</span>
+                        </div>
+                        <p class="text-sm text-gray-500 truncate">Click to open chat</p>
+                    </div>
+                    {% if chat.unread_count > 0 %}
+                    <span
+                        class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                        {{ chat.unread_count }}
+                    </span>
+                    {% endif %}
+                </div>
+            </a>
+            {% empty %}
+            <div class="p-4 text-center text-gray-500 text-sm">
+                No chats yet. Search for users to start chatting.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col bg-gray-50 bg-[url('https://web.telegram.org/img/bg_0.png')]"
+        :class="!sidebarOpen ? 'flex' : 'hidden md:flex'">
+        {% if active_chat %}
+        <!-- Chat Header -->
+        <div class="flex items-center justify-between px-6 py-3 bg-white border-b shadow-sm z-10" id="chat-details"
+            data-room-id="{{ active_chat.id }}" data-user="{{ user.username }}">
+            <div class="flex items-center space-x-4">
+                <button @click="sidebarOpen = true" class="md:hidden text-gray-500 hover:text-blue-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </button>
+                <div
+                    class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold overflow-hidden">
+                    {% if active_chat.chat_type == 'private' %}
+                    {% with partner=active_chat|get_chat_partner:user %}
+                    {% if partner.avatar %}
+                    <img src="{{ partner.avatar.url }}" alt="{{ partner.username }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="text-xl">{{ partner.username|make_list|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}
+                    <span class="text-xl">#</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800">{{ active_chat|get_chat_name:user }}</h3>
+                    {% if active_chat.chat_type == 'private' %}
+                    {% with partner=active_chat|get_chat_partner:user %}
+                    {% if partner.is_online %}
+                    <p class="text-xs text-green-500">Online</p>
+                    {% else %}
+                    <p class="text-xs text-gray-400">Last seen {{ partner.last_seen|time:"H:i"|default:"recently" }}</p>
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}
+                    <p class="text-xs text-gray-500">{{ active_chat.members.count }} members</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages-container">
+            {% for message in messages %}
+            {% if message.id == first_unread_id %}
+            <div class="flex justify-center my-4">
+                <span
+                    class="bg-blue-100 text-blue-600 text-xs px-3 py-1 rounded-full font-medium shadow-sm border border-blue-200">
+                    Unread messages
+                </span>
+            </div>
+            {% endif %}
+            <div class="flex {% if message.sender == user %}justify-end{% else %}justify-start{% endif %} group mb-4"
+                id="message-{{ message.id }}">
+                <!-- Actions Menu (Left for sent messages, Right for received) -->
+                {% if message.sender == user %}
+                <div
+                    class="hidden group-hover:flex items-center space-x-1 mr-2 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="editMessage('{{ message.id }}', `{{ message.text }}`)"
+                        class="text-gray-400 hover:text-blue-500" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path
+                                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                    </button>
+                    <button onclick="deleteMessage('{{ message.id }}')" class="text-gray-400 hover:text-red-500"
+                        title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                {% endif %}
+
+                <div id="msg-{{ message.id }}"
+                    class="{% if message.sender == user %}bg-blue-500 text-white{% else %}bg-white text-gray-800 border{% endif %} max-w-xs md:max-w-md lg:max-w-lg rounded-2xl px-4 py-2 shadow-sm relative text-left">
+                    {% if message.sender != user %}
+                    <div class="text-xs text-gray-500 mb-1 font-bold">{{ message.sender.username }}</div>
+                    {% endif %}
+
+                    <!-- Parent Message Preview -->
+                    {% if message.parent %}
+                    <div class="mb-1 pl-2 border-l-2 {% if message.sender == user %}border-white/50 text-blue-50{% else %}border-blue-500 text-gray-500{% endif %} text-xs cursor-pointer opacity-75"
+                        onclick="scrollToMessage('{{ message.parent.id }}')">
+                        <span class="font-bold block">{{ message.parent.sender.username }}</span>
+                        <span class="truncate block">{{ message.parent.text|truncatechars:50 }}</span>
+                    </div>
+                    {% endif %}
+
+                    <p class="text-sm whitespace-pre-wrap break-words" id="msg-text-{{ message.id }}">{{ message.text }}
+                    </p>
+                    {% if message.file %}
+                    {% if message.file|is_image %}
+                    <div class="mt-2">
+                        <a href="{{ message.file.url }}" target="_blank">
+                            <img src="{{ message.file.url }}" class="max-w-full h-auto rounded-lg"
+                                style="max-height: 300px;">
+                        </a>
+                    </div>
+                    {% elif message.file|is_audio %}
+                    <div class="mt-2">
+                        <audio controls class="max-w-full">
+                            <source src="{{ message.file.url }}" type="audio/mpeg"> <!-- Fallback MIME type -->
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    {% else %}
+                    <div class="mt-2">
+                        <a href="{{ message.file.url }}" target="_blank"
+                            class="text-blue-200 hover:underline flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.414l5 5a1 1 0 01.414 1.414V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Attachment
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                    <div class="flex items-center justify-end space-x-1 mt-1">
+                        {% if message.is_edited %}
+                        <span class="text-[9px] italic opacity-70">(edited)</span>
+                        {% endif %}
+                        <span
+                            class="text-[10px] {% if message.sender == user %}text-blue-100{% else %}text-gray-400{% endif %}">
+                            {{ message.timestamp|time:"H:i" }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Actions Menu (Right for received messages) -->
+                {% if message.sender != user %}
+                <div
+                    class="hidden group-hover:flex items-center ml-2 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onclick="replyToMessage('{{ message.id }}', '{{ message.sender.username }}', `{{ message.text }}`)"
+                        class="text-gray-400 hover:text-blue-500" title="Reply">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="flex justify-center items-center h-full text-gray-500">
+                <p>No messages yet. Say hello!</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Input Area -->
+        <div class="px-6 py-4 bg-white border-t relative">
+            <!-- Reply Preview -->
+            <div id="reply-preview"
+                class="hidden absolute bottom-full left-0 w-full bg-gray-100 p-2 border-t border-gray-200 flex justify-between items-center px-6">
+                <div class="flex flex-col">
+                    <span class="text-xs text-blue-500 font-bold" id="reply-to-user">Replying to...</span>
+                    <p class="text-sm text-gray-600 truncate max-w-md" id="reply-text">Message text...</p>
+                </div>
+                <button onclick="cancelReply()" class="text-gray-500 hover:text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+
+            {% csrf_token %}
+            <form class="flex items-center space-x-4">
+                <label class="cursor-pointer text-gray-400 hover:text-gray-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    <input type="file" id="file-input" class="hidden">
+                    <div id="file-preview" class="hidden absolute bottom-20 bg-white p-2 rounded shadow text-xs"></div>
+                </label>
+                <div class="flex-1">
+                    <input id="message-input" type="text" placeholder="Type a message..."
+                        class="w-full py-3 px-4 bg-gray-100 rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition duration-200">
+                </div>
+                <!-- Recording Interface -->
+                <div id="recording-ui" class="hidden flex items-center space-x-2 flex-1">
+                    <div class="flex items-center text-red-500 animate-pulse">
+                        <span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>
+                        <span id="recording-timer" class="font-mono font-bold">00:00</span>
+                    </div>
+                    <button type="button" id="stop-recording-button"
+                        class="text-gray-500 hover:text-red-500 p-2 rounded-full border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button type="button" id="cancel-recording-button"
+                        class="text-gray-400 hover:text-gray-600 p-2 text-sm">Cancel</button>
+                </div>
+
+                <button id="mic-button" type="button" class="text-gray-400 hover:text-blue-500 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <button id="send-button" type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-md transition transform hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+        {{ active_chat.id|json_script:"room-id" }}
+        {{ user.username|json_script:"user-username" }}
+        <script src="{% static 'js/chat.js' %}"></script>
+        {% else %}
+        <!-- Select Chat Placeholder -->
+        <div class="flex items-center justify-between px-6 py-3 bg-white border-b shadow-sm z-10">
+            <div class="flex items-center space-x-4">
+                <div
+                    class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">
+                    ?
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800">Select a chat</h3>
+                </div>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages-container">
+            <div class="flex justify-center items-center h-full text-gray-500">
+                <div class="text-center bg-white/80 p-6 rounded-xl shadow-sm backdrop-blur-sm">
+                    <div class="flex justify-center mb-4">
+                        <img src="{% static 'images/logo.png' %}" alt="MMAPP Logo" class="h-24 w-auto">
+                    </div>
+                    <h3 class="text-xl font-medium mb-2">Welcome to Modern Messaging APP (MMAPP)</h3>
+                    <p>Select a chat from the sidebar to start messaging.</p>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-white border-t opacity-50 cursor-not-allowed">
+            <div class="flex items-center space-x-4">
+                <input type="text" placeholder="Select a chat to start messaging..."
+                    class="w-full py-3 px-4 bg-gray-100 rounded-full" disabled>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+<script src="{% static 'js/notifications.js' %}"></script>
+{% endblock %}

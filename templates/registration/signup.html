@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up - MMAPP{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+    <div class="bg-white p-4 md:p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex justify-center mb-4">
+            <img src="{% static 'images/logo.png' %}" alt="MMAPP Logo" class="h-20 w-auto">
+        </div>
+        <h2 class="text-2xl font-bold mb-6 text-center text-green-600">Create Account</h2>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                <p class="text-gray-600 text-xs mt-1">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="flex items-center justify-between pt-4">
+                <button
+                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-150"
+                    type="submit">
+                    Sign Up
+                </button>
+            </div>
+        </form>
+        <p class="mt-4 text-center text-gray-600 text-xs">
+            Already have an account? <a href="{% url 'login' %}" class="text-green-500 hover:text-green-800">Log in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
